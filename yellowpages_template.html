@@ -1,0 +1,202 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    
+    <link rel="stylesheet" type="text/css" href="./static/jqueryui/1.8.23/themes/base/jquery-ui.css" media="all" />
+    <!--<link rel="stylesheet" type="text/css" href="./static/thumbs.css" />-->
+    <link rel="stylesheet" type="text/css" href="./static/yellowpages.css">
+    
+    <script type="text/javascript" src="./static/jquery.js"></script>
+    <script type="text/javascript" src="./static/jqueryui/1.8.23/jquery-ui.min.js" ></script>
+    <script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?key=AIzaSyD0NMFgib4FMJ3VBPp7CthBrGIRTDM5ObI&sensor=false"></script>
+    <!--<script type="text/javascript" src="./static/cropper.js"></script>
+    <script type="text/javascript" src="./static/thumbs.js"></script>-->
+    
+    <script src="./static/scroller/js/jquery.easing.js" type="text/javascript"></script>
+	<script src="./static/scroller/js/scroller.js" type="text/javascript"></script>
+	
+	<script type="text/javascript" src="./static/imgpreload/jquery.imgpreload.js"></script>
+	<script type="text/javascript" src="./static/nailthumb/jquery.nailthumb.1.1.js"></script>
+	
+	<script type="text/javascript" src="./static/jquery.waitforimages.js"></script>
+	    
+    <script type="text/javascript">    
+	  
+	  function fillsnipets() {
+	  	var imagewidth = Math.floor(Math.min($(window).width()*.8/5.0, 100));
+	  	var imageheight = imagewidth;
+	  	/*var $canvasarray = $('.snipetrow').find('canvas');
+		for (var i=0; i<$canvasarray.length; i++)
+		{			
+			cropImage($canvasarray[i], imagewidth, $canvasarray[i].id, "./static/brokenlink.gif");
+		}*/
+		//$('.thumb').thumbs();
+		//$('.nailthumb-container').nailthumb();
+		$('.nailthumb-container img').imgpreload({
+            each: function(){
+                $(this).parents('.nailthumb-container').nailthumb({width:imagewidth, height:imageheight, preload:true});
+            }, all: function(){
+            }
+        });
+        
+        $('#results').waitForImages(function() {
+			//alert('All images have loaded.');
+		}, function(loaded, count, success) {
+		   //alert(loaded + ' of ' + count + ' images has ' + (success ? 'loaded' : 'failed to load') +  '.');
+		   //$(this).addClass('loaded');
+		   $(this).css('display','show');
+		});
+		
+	  }
+	  
+	  //$(window).load( fillsnipets );
+	  
+	  function setScrollingMagnifiers() {
+	  	$('.magnifierwrapper').scroller({
+	  		element: '.magnifiercontent', // (string) HTML element
+			direction: 'horizontal', // (string) available options: horizontal, vertical
+			container: {
+				name: 'magnifierinside', // (string) class name for the container
+				easing: 'easeOutExpo',
+				duration: 800 // (int) set the speed of the easing animation in milliseconds
+			},
+			options: {
+				margin: 10,
+				zoom: 4,
+				easing: ['easeInSine', 'easeOutSine'],
+				duration: [300, 300]
+			},
+			onclick: function(a, img){},
+			onmouseover: function(a, img){},
+			onmouseout: function(a, img){}
+		});
+	  }
+	  
+	  var geocoder;
+	  
+	  function initialize() {
+	  
+	  	$('#spacefiller').height($(window).height()/3);
+	  	$('#commands').fadeToggle(1000, 'swing');
+	  	
+	  	setScrollingMagnifiers();
+	  
+		geocoder = new google.maps.Geocoder();
+		
+		$('.defaultText').focus(function(srcc)
+		{
+			if ($(this).val() == $(this)[0].title)
+			{
+				$(this).removeClass('defaultTextActive');
+				$(this).val("");
+			}
+		});		
+		$('.defaultText').blur(function()
+		{
+			if ($(this).val() == "")
+			{
+				$(this).addClass('defaultTextActive');
+				$(this).val($(this)[0].title);
+			}
+		});
+		$('.defaultText').blur();
+		
+		//fillsnipets();        
+	  }
+	  
+	  function onBeforeSearch() {
+	  	$('body').addClass('loading');
+		$('#spacefiller').hide('blind', {direction:'vertical'}, 1000);
+		$('#spacefiller').height(0);
+	  }
+	  function onAfterSearch() {
+	  	$('body').removeClass('loading');
+	  	setScrollingMagnifiers();
+	  	fillsnipets();
+	  }
+	  function searchGalleries() {
+		var address = $('#field').val();
+		geocoder.geocode( {'address':address, 'region':'fr'}, function(results, status) {
+		  if (status == google.maps.GeocoderStatus.OK) {
+			var south = results[0].geometry.viewport.getSouthWest().lat();
+			var west = results[0].geometry.viewport.getSouthWest().lng();
+			var north = results[0].geometry.viewport.getNorthEast().lat();
+			var east = results[0].geometry.viewport.getNorthEast().lng();
+			queryurl = "/yellowpages?north="+String(north)+"&east="+String(east)+"&south="+String(south)+"&west="+String(west);
+			onBeforeSearch();
+			$('#results').load(queryurl+' #results', onAfterSearch); 
+		  } else {
+			alert("Geocoding failed for the following reason: " + status);
+		  }		  
+		});		
+	  }
+	  	  
+    </script>
+  </head>
+  
+  <body onload="initialize()">
+  	
+  	<div id="main" align="center">
+  	
+  		<div id="spacefiller"></div>
+  	
+  		<div id="commands" align="center">
+  			<div id="thickline"></div>
+  			<br>
+			<div id="searchcontainer">
+				<form action="javascript:void(0);" onSubmit="searchGalleries()">
+					<input id="field" name="field" class="defaultText" type="text" title="e.g. adresse, ville, r&eacute;gion, code postal ..."/>
+					<input id="submit" name="submit" type="submit" value="Search"/>
+				</form>
+			</div>
+			<br>
+		</div>
+  		
+  		<div id="results" align="center">
+  			<br>
+  			<table width="40%">
+			{% for yellowentry in yellowentries %}
+				<tr>
+					<td>
+						<fieldset style="border:1px solid Gray;">
+							<legend>
+							{% ifequal yellowentry.gallery.webadress "" %}
+								<span style="font-size:1em;">{{ yellowentry.gallery.name }}</span>
+							{% else %}
+								<a class="gallerylink" href="{{ yellowentry.gallery.webadress }}">{{ yellowentry.gallery.name }}</a>
+							{% endifequal %}
+							</legend>
+							<div style="position:relative; width:100%;">
+								<div class="magnifierwrapper magnifierinside" style="width:5%; position:absolute; top:0; right:20px;">
+									<div class="magnifiercontent">
+										<img src="http://maps.googleapis.com/maps/api/staticmap?center={{yellowentry.latitude}},{{yellowentry.longitude}}&markers=color:0xFF0000%7Csize:mid%7C{{yellowentry.latitude}},{{yellowentry.longitude}}&zoom=14&size=200x200&scale=1&sensor=false"/>
+									</div>
+								</div>
+								<div style="font-size:.9em; display:inline; position:relative; left:0;">
+									{{ yellowentry.gallery.adress }}, {{ yellowentry.gallery.zipcode }}, {{ yellowentry.gallery.city }}
+								</div>
+							</div>
+							<table align="left">
+								<tr class="snipetrow" height="50px">
+								{% for imagelink in yellowentry.thumbnails %}
+									<!--<td><img src="{{imagelink}}" class="thumb mainimage"/></td>-->
+									<!--<td><canvas id="{{imagelink}}"/></td>-->
+									<td><div class="nailthumb-container"><img style="display:none;" src="{{imagelink}}" width="100px" height="100px"/></div></td>
+								{% endfor %}
+								</tr>
+							</table>
+						</fieldset>
+						<br>
+					</td>
+				</tr>
+			{% endfor %}
+			</table>
+		</div>
+		
+  	</div>
+	<div class="modal"></div>
+  	​
+  </body>
+</html>
